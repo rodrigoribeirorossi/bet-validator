@@ -277,7 +277,7 @@ export function validateBTTS(
     : history.no / totalHistorical;
   
   // Combine probabilities (50% calculated, 50% historical)
-  let calculatedProb = betType === 'YES'
+  const calculatedProb = betType === 'YES'
     ? bothScoreProb * 0.5 + historicalProb * 0.5
     : (1 - bothScoreProb) * 0.5 + historicalProb * 0.5;
   

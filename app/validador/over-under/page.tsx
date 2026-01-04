@@ -10,67 +10,74 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ResultadoAnalise } from '@/components/validador/resultado-analise';
-import { validate1X2 } from '@/lib/validador';
+import { validateOverUnder } from '@/lib/validador';
 import { useAppStore } from '@/store';
 import { BetValidationResult } from '@/types';
 
 const schema = z.object({
   homeTeam: z.string().min(1, 'Nome do time obrigatório'),
   awayTeam: z.string().min(1, 'Nome do time obrigatório'),
+  line: z.number().min(0.5, 'Linha deve ser maior que 0.5'),
   odds: z.number().min(1.01, 'Odds deve ser maior que 1.01'),
-  homeWins: z.number().min(0),
-  homeDraws: z.number().min(0),
-  homeLosses: z.number().min(0),
-  awayWins: z.number().min(0),
-  awayDraws: z.number().min(0),
-  awayLosses: z.number().min(0),
+  homeScored: z.number().min(0),
+  homeConceded: z.number().min(0),
+  homeGames: z.number().min(1),
+  awayScored: z.number().min(0),
+  awayConceded: z.number().min(0),
+  awayGames: z.number().min(1),
+  historyOver: z.number().min(0),
+  historyUnder: z.number().min(0),
   bankroll: z.number().min(1, 'Banca deve ser maior que 0'),
 });
 
 type FormData = z.infer<typeof schema>;
 
-export default function Resultado1X2Page() {
+export default function OverUnderPage() {
   const [result, setResult] = useState<BetValidationResult | null>(null);
-  const [selectedOutcome, setSelectedOutcome] = useState<'1' | 'X' | '2'>('1');
+  const [selectedType, setSelectedType] = useState<'OVER' | 'UNDER'>('OVER');
   const bankroll = useAppStore((state) => state.bankroll);
   const addValidation = useAppStore((state) => state.addValidation);
 
   const {
     register,
     handleSubmit,
-    formState: { errors },
     watch,
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
       bankroll: bankroll.currentBankroll,
+      line: 2.5,
     },
   });
 
   const onSubmit = (data: FormData) => {
-    const validationResult = validate1X2(
+    const validationResult = validateOverUnder(
       {
-        wins: data.homeWins,
-        draws: data.homeDraws,
-        losses: data.homeLosses,
+        scored: data.homeScored,
+        conceded: data.homeConceded,
+        games: data.homeGames,
       },
       {
-        wins: data.awayWins,
-        draws: data.awayDraws,
-        losses: data.awayLosses,
+        scored: data.awayScored,
+        conceded: data.awayConceded,
+        games: data.awayGames,
       },
+      {
+        over: data.historyOver,
+        under: data.historyUnder,
+      },
+      data.line,
       data.odds,
       data.bankroll,
-      selectedOutcome
+      selectedType
     );
 
     setResult(validationResult);
 
-    // Add to history
     addValidation({
       date: new Date(),
-      type: 'RESULTADO_1X2',
-      match: `${data.homeTeam} vs ${data.awayTeam}`,
+      type: 'OVER_UNDER',
+      match: `${data.homeTeam} vs ${data.awayTeam} - ${selectedType} ${data.line}`,
       result: validationResult,
       odds: data.odds,
       stake: validationResult.recommendedStake,
@@ -82,9 +89,9 @@ export default function Resultado1X2Page() {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight mb-2">Resultado 1X2 (Moneyline)</h1>
+        <h1 className="text-3xl font-bold tracking-tight mb-2">Over/Under Gols</h1>
         <p className="text-muted-foreground">
-          Validar apostas de resultado final (vitória casa, empate, vitória fora)
+          Validar apostas de mais/menos gols usando distribuição de Poisson
         </p>
       </div>
 
@@ -105,9 +112,6 @@ export default function Resultado1X2Page() {
                     {...register('homeTeam')}
                     placeholder="Ex: Manchester City"
                   />
-                  {errors.homeTeam && (
-                    <p className="text-sm text-red-500">{errors.homeTeam.message}</p>
-                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -117,22 +121,31 @@ export default function Resultado1X2Page() {
                     {...register('awayTeam')}
                     placeholder="Ex: Liverpool"
                   />
-                  {errors.awayTeam && (
-                    <p className="text-sm text-red-500">{errors.awayTeam.message}</p>
-                  )}
                 </div>
               </div>
 
-              {/* Outcome Selection */}
-              <div className="space-y-2">
-                <Label>Apostar em:</Label>
-                <Tabs value={selectedOutcome} onValueChange={(v) => setSelectedOutcome(v as '1' | 'X' | '2')}>
-                  <TabsList className="grid w-full grid-cols-3">
-                    <TabsTrigger value="1">Vitória Casa (1)</TabsTrigger>
-                    <TabsTrigger value="X">Empate (X)</TabsTrigger>
-                    <TabsTrigger value="2">Vitória Fora (2)</TabsTrigger>
-                  </TabsList>
-                </Tabs>
+              {/* Bet Type and Line */}
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Tipo de Aposta:</Label>
+                  <Tabs value={selectedType} onValueChange={(v) => setSelectedType(v as 'OVER' | 'UNDER')}>
+                    <TabsList className="grid w-full grid-cols-2">
+                      <TabsTrigger value="OVER">Over</TabsTrigger>
+                      <TabsTrigger value="UNDER">Under</TabsTrigger>
+                    </TabsList>
+                  </Tabs>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="line">Linha de Gols</Label>
+                  <Input
+                    id="line"
+                    type="number"
+                    step="0.5"
+                    {...register('line', { valueAsNumber: true })}
+                    placeholder="2.5"
+                  />
+                </div>
               </div>
 
               {/* Odds */}
@@ -143,76 +156,98 @@ export default function Resultado1X2Page() {
                   type="number"
                   step="0.01"
                   {...register('odds', { valueAsNumber: true })}
-                  placeholder="Ex: 2.50"
+                  placeholder="1.90"
                 />
-                {errors.odds && (
-                  <p className="text-sm text-red-500">{errors.odds.message}</p>
-                )}
               </div>
 
-              {/* Home Team Stats */}
+              {/* Home Team Goals */}
               <div className="space-y-2">
-                <Label>Estatísticas Time Casa (jogando em casa)</Label>
+                <Label>Estatísticas de Gols - Time Casa</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="homeWins" className="text-xs">Vitórias</Label>
+                    <Label htmlFor="homeScored" className="text-xs">Gols Marcados</Label>
                     <Input
-                      id="homeWins"
+                      id="homeScored"
                       type="number"
-                      {...register('homeWins', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('homeScored', { valueAsNumber: true })}
+                      placeholder="25"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="homeDraws" className="text-xs">Empates</Label>
+                    <Label htmlFor="homeConceded" className="text-xs">Gols Sofridos</Label>
                     <Input
-                      id="homeDraws"
+                      id="homeConceded"
                       type="number"
-                      {...register('homeDraws', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('homeConceded', { valueAsNumber: true })}
+                      placeholder="15"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="homeLosses" className="text-xs">Derrotas</Label>
+                    <Label htmlFor="homeGames" className="text-xs">Jogos</Label>
                     <Input
-                      id="homeLosses"
+                      id="homeGames"
                       type="number"
-                      {...register('homeLosses', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('homeGames', { valueAsNumber: true })}
+                      placeholder="20"
                     />
                   </div>
                 </div>
               </div>
 
-              {/* Away Team Stats */}
+              {/* Away Team Goals */}
               <div className="space-y-2">
-                <Label>Estatísticas Time Visitante (jogando fora)</Label>
+                <Label>Estatísticas de Gols - Time Visitante</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="awayWins" className="text-xs">Vitórias</Label>
+                    <Label htmlFor="awayScored" className="text-xs">Gols Marcados</Label>
                     <Input
-                      id="awayWins"
+                      id="awayScored"
                       type="number"
-                      {...register('awayWins', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('awayScored', { valueAsNumber: true })}
+                      placeholder="22"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="awayDraws" className="text-xs">Empates</Label>
+                    <Label htmlFor="awayConceded" className="text-xs">Gols Sofridos</Label>
                     <Input
-                      id="awayDraws"
+                      id="awayConceded"
                       type="number"
-                      {...register('awayDraws', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('awayConceded', { valueAsNumber: true })}
+                      placeholder="18"
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="awayLosses" className="text-xs">Derrotas</Label>
+                    <Label htmlFor="awayGames" className="text-xs">Jogos</Label>
                     <Input
-                      id="awayLosses"
+                      id="awayGames"
                       type="number"
-                      {...register('awayLosses', { valueAsNumber: true })}
-                      placeholder="0"
+                      {...register('awayGames', { valueAsNumber: true })}
+                      placeholder="20"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Historical Data */}
+              <div className="space-y-2">
+                <Label>Histórico de Over/Under</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <Label htmlFor="historyOver" className="text-xs">Jogos Over</Label>
+                    <Input
+                      id="historyOver"
+                      type="number"
+                      {...register('historyOver', { valueAsNumber: true })}
+                      placeholder="12"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label htmlFor="historyUnder" className="text-xs">Jogos Under</Label>
+                    <Input
+                      id="historyUnder"
+                      type="number"
+                      {...register('historyUnder', { valueAsNumber: true })}
+                      placeholder="8"
                     />
                   </div>
                 </div>
@@ -228,9 +263,6 @@ export default function Resultado1X2Page() {
                   {...register('bankroll', { valueAsNumber: true })}
                   placeholder="1000"
                 />
-                {errors.bankroll && (
-                  <p className="text-sm text-red-500">{errors.bankroll.message}</p>
-                )}
               </div>
 
               <Button type="submit" className="w-full" size="lg">
