@@ -3,16 +3,16 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
+import { z } from 'zod';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
+import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ResultadoAnalise } from '@/components/validador/resultado-analise';
-import { validate1X2 } from '@/lib/validador';
 import { useAppStore } from '@/store';
-import { BetValidationResult } from '@/types';
+import { validate1X2 } from '@/lib/validador';
+import { ResultadoAnalise } from '@/components/validador/resultado-analise';
+import type { BetValidationResult } from '@/types';
 
 const schema = z.object({
   homeTeam: z.string().min(1, 'Nome do time obrigatório'),
@@ -24,7 +24,6 @@ const schema = z.object({
   awayWins: z.number().min(0),
   awayDraws: z.number().min(0),
   awayLosses: z.number().min(0),
-  bankroll: z.number().min(1, 'Banca deve ser maior que 0'),
 });
 
 type FormData = z.infer<typeof schema>;
@@ -32,6 +31,8 @@ type FormData = z.infer<typeof schema>;
 export default function Resultado1X2Page() {
   const [result, setResult] = useState<BetValidationResult | null>(null);
   const [selectedOutcome, setSelectedOutcome] = useState<'1' | 'X' | '2'>('1');
+  
+  // Usar o valor da banca diretamente do store
   const bankroll = useAppStore((state) => state.bankroll);
   const addValidation = useAppStore((state) => state.addValidation);
 
@@ -43,11 +44,19 @@ export default function Resultado1X2Page() {
   } = useForm<FormData>({
     resolver: zodResolver(schema),
     defaultValues: {
-      bankroll: bankroll.currentBankroll,
+      homeWins: 0,
+      homeDraws: 0,
+      homeLosses: 0,
+      awayWins: 0,
+      awayDraws: 0,
+      awayLosses: 0,
     },
   });
 
   const onSubmit = (data: FormData) => {
+    // Usar o valor atualizado da banca do store
+    const currentBankrollValue = bankroll.currentBankroll;
+    
     const validationResult = validate1X2(
       {
         wins: data.homeWins,
@@ -60,7 +69,7 @@ export default function Resultado1X2Page() {
         losses: data.awayLosses,
       },
       data.odds,
-      data.bankroll,
+      currentBankrollValue,
       selectedOutcome
     );
 
@@ -78,6 +87,13 @@ export default function Resultado1X2Page() {
   };
 
   const formValues = watch();
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
 
   return (
     <div className="space-y-6">
@@ -155,7 +171,7 @@ export default function Resultado1X2Page() {
                 <Label>Estatísticas Time Casa (jogando em casa)</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="homeWins" className="text-xs">Vitórias</Label>
+                    <Label htmlFor="homeWins" className="text-xs text-muted-foreground">Vitórias</Label>
                     <Input
                       id="homeWins"
                       type="number"
@@ -164,7 +180,7 @@ export default function Resultado1X2Page() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="homeDraws" className="text-xs">Empates</Label>
+                    <Label htmlFor="homeDraws" className="text-xs text-muted-foreground">Empates</Label>
                     <Input
                       id="homeDraws"
                       type="number"
@@ -173,7 +189,7 @@ export default function Resultado1X2Page() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="homeLosses" className="text-xs">Derrotas</Label>
+                    <Label htmlFor="homeLosses" className="text-xs text-muted-foreground">Derrotas</Label>
                     <Input
                       id="homeLosses"
                       type="number"
@@ -189,7 +205,7 @@ export default function Resultado1X2Page() {
                 <Label>Estatísticas Time Visitante (jogando fora)</Label>
                 <div className="grid grid-cols-3 gap-2">
                   <div className="space-y-1">
-                    <Label htmlFor="awayWins" className="text-xs">Vitórias</Label>
+                    <Label htmlFor="awayWins" className="text-xs text-muted-foreground">Vitórias</Label>
                     <Input
                       id="awayWins"
                       type="number"
@@ -198,7 +214,7 @@ export default function Resultado1X2Page() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="awayDraws" className="text-xs">Empates</Label>
+                    <Label htmlFor="awayDraws" className="text-xs text-muted-foreground">Empates</Label>
                     <Input
                       id="awayDraws"
                       type="number"
@@ -207,7 +223,7 @@ export default function Resultado1X2Page() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label htmlFor="awayLosses" className="text-xs">Derrotas</Label>
+                    <Label htmlFor="awayLosses" className="text-xs text-muted-foreground">Derrotas</Label>
                     <Input
                       id="awayLosses"
                       type="number"
@@ -218,19 +234,20 @@ export default function Resultado1X2Page() {
                 </div>
               </div>
 
-              {/* Bankroll */}
+              {/* Bankroll Info - Apenas exibição */}
               <div className="space-y-2">
-                <Label htmlFor="bankroll">Banca Atual (R$)</Label>
-                <Input
-                  id="bankroll"
-                  type="number"
-                  step="0.01"
-                  {...register('bankroll', { valueAsNumber: true })}
-                  placeholder="1000"
-                />
-                {errors.bankroll && (
-                  <p className="text-sm text-red-500">{errors.bankroll.message}</p>
-                )}
+                <Label>Banca Atual</Label>
+                <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                  <span className="text-sm text-muted-foreground">
+                    Valor usado para cálculo do stake
+                  </span>
+                  <span className="font-semibold text-green-600">
+                    {formatCurrency(bankroll.currentBankroll)}
+                  </span>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Para alterar, acesse <a href="/banca" className="text-primary underline">Gestão de Banca</a>
+                </p>
               </div>
 
               <Button type="submit" className="w-full" size="lg">
@@ -245,7 +262,7 @@ export default function Resultado1X2Page() {
             <ResultadoAnalise 
               result={result} 
               odds={formValues.odds || 0} 
-              stake={formValues.bankroll}
+              stake={bankroll.currentBankroll}
             />
           ) : (
             <Card>

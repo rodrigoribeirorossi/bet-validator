@@ -1,78 +1,115 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
-import { BankrollState, BankrollEntry, ValidationHistory } from '@/types';
+
+export interface BetValidationResult {
+  impliedProbability: number;
+  calculatedProbability: number;
+  valueBet: number;
+  edge: number;
+  fairOdds: number;
+  recommendedStake: number;
+  expectedValue: number;
+  expectedROI: number;
+  recommendation: 'APOSTAR_FORTE' | 'APOSTAR' | 'CAUTELA' | 'EVITAR';
+  confidenceLevel: 'ALTA' | 'MEDIA' | 'BAIXA';
+}
+
+export interface ValidationHistory {
+  id: string;
+  date: Date;
+  type: string;
+  match: string;
+  result: BetValidationResult;
+  odds: number;
+  stake: number;
+}
+
+export interface UserProfile {
+  name: string;
+  email?: string;
+}
+
+export interface Bankroll {
+  initialBankroll: number;
+  currentBankroll: number;
+  lastUpdated: Date;
+}
 
 interface AppState {
-  // Bankroll
-  bankroll: BankrollState;
-  updateBankroll: (amount: number) => void;
-  addBankrollEntry: (entry: Omit<BankrollEntry, 'id'>) => void;
-  
-  // Validation History
-  history: ValidationHistory[];
-  addValidation: (validation: Omit<ValidationHistory, 'id'>) => void;
-  updateValidationOutcome: (id: string, outcome: 'WIN' | 'LOSS') => void;
+  // User
+  user: UserProfile;
+  setUser: (user: Partial<UserProfile>) => void;
   
   // Theme
   theme: 'light' | 'dark';
   toggleTheme: () => void;
+  
+  // Bankroll
+  bankroll: Bankroll;
+  setBankroll: (amount: number) => void;
+  updateCurrentBankroll: (amount: number) => void;
+  
+  // History
+  validationHistory: ValidationHistory[];
+  addValidation: (validation: Omit<ValidationHistory, 'id'>) => void;
+  clearHistory: () => void;
 }
 
 export const useAppStore = create<AppState>()(
   persist(
     (set, get) => ({
-      // Bankroll state
-      bankroll: {
-        currentBankroll: 1000,
-        initialBankroll: 1000,
-        history: [],
+      // User
+      user: {
+        name: 'Usuário',
       },
-      
-      updateBankroll: (amount: number) => {
+      setUser: (userData) =>
+        set((state) => ({
+          user: { ...state.user, ...userData },
+        })),
+
+      // Theme
+      theme: 'light',
+      toggleTheme: () =>
+        set((state) => ({
+          theme: state.theme === 'light' ? 'dark' : 'light',
+        })),
+
+      // Bankroll
+      bankroll: {
+        initialBankroll: 1000,
+        currentBankroll: 1000,
+        lastUpdated: new Date(),
+      },
+      setBankroll: (amount) =>
+        set({
+          bankroll: {
+            initialBankroll: amount,
+            currentBankroll: amount,
+            lastUpdated: new Date(),
+          },
+        }),
+      updateCurrentBankroll: (amount) =>
         set((state) => ({
           bankroll: {
             ...state.bankroll,
             currentBankroll: amount,
+            lastUpdated: new Date(),
           },
-        }));
-      },
-      
-      addBankrollEntry: (entry) => {
-        const id = `${Date.now()}-${Math.random()}`;
+        })),
+
+      // History
+      validationHistory: [],
+      addValidation: (validation) =>
         set((state) => ({
-          bankroll: {
-            ...state.bankroll,
-            history: [...state.bankroll.history, { ...entry, id }],
-          },
-        }));
-      },
-      
-      // History state
-      history: [],
-      
-      addValidation: (validation) => {
-        const id = `${Date.now()}-${Math.random()}`;
-        set((state) => ({
-          history: [...state.history, { ...validation, id }],
-        }));
-      },
-      
-      updateValidationOutcome: (id: string, outcome: 'WIN' | 'LOSS') => {
-        set((state) => ({
-          history: state.history.map((h) =>
-            h.id === id ? { ...h, outcome } : h
-          ),
-        }));
-      },
-      
-      // Theme state
-      theme: 'light',
-      
-      toggleTheme: () => {
-        set((state) => ({
-          theme: state.theme === 'light' ? 'dark' : 'light',
-        }));
-      },
+          validationHistory: [
+            {
+              ...validation,
+              id: crypto.randomUUID(),
+            },
+            ...state.validationHistory,
+          ],
+        })),
+      clearHistory: () => set({ validationHistory: [] }),
     }),
     {
       name: 'bet-validator-storage',

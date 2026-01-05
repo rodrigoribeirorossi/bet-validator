@@ -22,7 +22,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 89.8%;
     --input: 0 0% 89.8%;
-    --ring: 142 76% 36%;
+    --ring: 16 100% 60%;
     --radius: 0.5rem;
   }
 
@@ -45,7 +45,7 @@
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 14.9%;
     --input: 0 0% 14.9%;
-    --ring: 142 76% 36%;
+    --ring: 16 100% 66%;
   }
 }
 
@@ -57,4 +57,120 @@
     background-color: hsl(var(--background));
     color: hsl(var(--foreground));
   }
+}
+
+/* Garante que o Popover tenha fundo sólido */
+[data-radix-popper-content-wrapper] {
+  z-index: 9999 !important;
+}
+
+[role="dialog"][data-radix-popover-content] {
+  background-color: hsl(var(--card)) !important;
+  opacity: 1 !important;
+}
+
+/* Remove TODOS os estilos de foco padrão */
+*,
+*:focus,
+*:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Aplica APENAS o foco laranja customizado */
+*:focus-visible {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 2px !important;
+  border-radius: 4px;
+  box-shadow: none !important;
+}
+
+/* Focus para botões */
+button:focus-visible,
+[role="button"]:focus-visible {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.2) !important;
+}
+
+/* Focus para inputs - Remove ring azul do Tailwind */
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 1px !important;
+  border-color: #ff6b35 !important;
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.15) !important;
+  --tw-ring-color: transparent !important;
+}
+
+/* Focus para Tabs (Radix UI) */
+[role="tab"]:focus-visible {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 4px rgba(255, 107, 53, 0.2) !important;
+  z-index: 10;
+}
+
+/* Focus para links */
+a:focus-visible {
+  outline: 3px solid #ff6b35 !important;
+  outline-offset: 2px !important;
+  border-radius: 2px;
+  box-shadow: none !important;
+}
+
+/* Modo escuro - Focus laranja mais claro */
+.dark *:focus-visible {
+  outline-color: #ff8c5a !important;
+}
+
+.dark button:focus-visible,
+.dark [role="button"]:focus-visible,
+.dark [role="tab"]:focus-visible {
+  outline-color: #ff8c5a !important;
+  box-shadow: 0 0 0 4px rgba(255, 140, 90, 0.3) !important;
+}
+
+.dark input:focus-visible,
+.dark textarea:focus-visible,
+.dark select:focus-visible {
+  outline-color: #ff8c5a !important;
+  border-color: #ff8c5a !important;
+  box-shadow: 0 0 0 3px rgba(255, 140, 90, 0.2) !important;
+}
+
+/* Estilos para Tab selecionada (estado ativo) */
+[role="tab"][data-state="active"] {
+  background-color: #ff6b35 !important;
+  color: white !important;
+  font-weight: 600;
+  border-color: #ff6b35 !important;
+  box-shadow: 0 2px 8px rgba(255, 107, 53, 0.3) !important;
+  transition: all 0.2s ease-in-out;
+}
+
+/* Hover nas tabs */
+[role="tab"]:hover:not([data-state="active"]) {
+  background-color: rgba(255, 107, 53, 0.1);
+  transition: all 0.2s ease-in-out;
+}
+
+/* Tabs não selecionadas */
+[role="tab"]:not([data-state="active"]) {
+  background-color: transparent;
+  color: hsl(var(--muted-foreground));
+  transition: all 0.2s ease-in-out;
+}
+
+/* Modo escuro - Tab ativa */
+.dark [role="tab"][data-state="active"] {
+  background-color: #ff8c5a !important;
+  color: white !important;
+  box-shadow: 0 2px 8px rgba(255, 140, 90, 0.4) !important;
+}
+
+/* Modo escuro - Hover */
+.dark [role="tab"]:hover:not([data-state="active"]) {
+  background-color: rgba(255, 140, 90, 0.15);
 }

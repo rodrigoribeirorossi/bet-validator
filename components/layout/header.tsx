@@ -6,6 +6,7 @@ import { Moon, Sun, Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAppStore } from '@/store';
 import { useState } from 'react';
+import { UserConfigPopover } from './user-config-popover';
 
 export function Header() {
   const pathname = usePathname();
@@ -49,6 +50,11 @@ export function Header() {
         </div>
 
         <div className="flex items-center gap-4">
+          {/* User Info & Bankroll - Desktop */}
+          <div className="hidden sm:block">
+            <UserConfigPopover />
+          </div>
+
           <Button
             variant="ghost"
             size="icon"
@@ -73,6 +79,11 @@ export function Header() {
       {/* Mobile Menu */}
       {mobileMenuOpen && (
         <div className="md:hidden border-t bg-background p-4">
+          {/* Mobile User Info - Editável */}
+          <div className="pb-4 mb-4 border-b">
+            <UserConfigPopover />
+          </div>
+          
           <nav className="flex flex-col gap-4">
             <Link
               href="/validador"
